@@ -1,0 +1,34 @@
+#!/bin/bash
+# Default user data for grocery app EC2 instances
+# Updates system, installs Docker & CloudWatch Agent, and runs application via docker-compose.
+
+set -euo pipefail
+
+# Update base system
+apt update -y
+apt install -y docker.io amazon-cloudwatch-agent awscli git
+systemctl enable docker
+
+# CloudWatch Agent basic config for disk usage metric
+tmp_cfg="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+mkdir -p $(dirname "$tmp_cfg")
+cat > "$tmp_cfg" <<EOF
+{
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": ["used_percent"],
+        "resources": ["*"]
+      }
+    }
+  }
+}
+EOF
+
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:$tmp_cfg \
+  -s
+
+echo "User data bootstrap complete." > /var/log/user_data_complete

@@ -32,3 +32,7 @@ override.tf.json
 
 # Test files
 main.tf.example
+
+# Ignore TFLint cache and config files
+.tflint.hcl
+.tflint.d/
