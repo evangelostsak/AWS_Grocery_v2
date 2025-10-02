@@ -9,10 +9,6 @@ apt update -y
 apt install -y docker.io amazon-cloudwatch-agent awscli git
 systemctl enable docker
 
-# (Optional) Pull application repo or image placeholder
-# git clone https://github.com/example/your-app.git /opt/app
-# cd /opt/app && docker-compose up -d --build
-
 # CloudWatch Agent basic config for disk usage metric
 tmp_cfg="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
 mkdir -p $(dirname "$tmp_cfg")
