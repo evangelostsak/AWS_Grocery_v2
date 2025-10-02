@@ -1,5 +1,13 @@
-resource "aws_launch_template" "app_template" {
-  name_prefix   = "grocery-app-"
+############################################
+# EC2 / ASG MODULE
+############################################
+
+locals {
+  user_data_rendered = var.user_data != "" ? var.user_data : base64encode(templatefile(var.default_user_data_template_path, {}))
+}
+
+resource "aws_launch_template" "this" {
+  name_prefix   = "${var.name_prefix}-lt-"
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
