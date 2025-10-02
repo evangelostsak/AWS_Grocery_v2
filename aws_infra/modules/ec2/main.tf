@@ -11,58 +11,22 @@ resource "aws_launch_template" "this" {
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
-  iam_instance_profile {
-    name = aws_iam_instance_profile.ec2_instance_profile.name
-  }
-  monitoring {
-    enabled = true
-  }
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  user_data = base64encode(<<-EOF
-  #!/bin/bash
-  apt update -y
-  apt install -y awslogs amazon-cloudwatch-agent
 
-  # Create config for CW Agent
-  cat <<EOC > /opt/aws/amazon-cloudwatch-agent/bin/config.json
-  {
-    "metrics": {
-      "metrics_collected": {
-        "disk": {
-          "measurement": [
-            "used_percent"
-          ],
-          "resources": [
-            "*"
-          ]
-        }
-      }
+  iam_instance_profile { name = var.instance_profile_name }
+
+  monitoring { enabled = true }
+
+  vpc_security_group_ids = [var.security_group_id]
+
+  user_data = var.inline_user_data_base64 ? local.user_data_rendered : base64encode(local.user_data_rendered)
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name        = "${var.name_prefix}-instance"
+      Environment = var.environment
     }
   }
-  EOC
-
-  # Start CW Agent with config
-  /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-    -a fetch-config \
-    -m ec2 \
-    -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json \
-    -s
-
-  systemctl enable amazon-cloudwatch-agent
-  systemctl start amazon-cloudwatch-agent
-
-  echo "CloudWatch Agent Started!"
-
-  # Optional legacy awslogs setup if still used
-  echo '[general]' | sudo tee /etc/awslogs/awscli.conf
-  echo 'state_file = /var/lib/awslogs/agent-state' | sudo tee -a /etc/awslogs/awscli.conf
-  echo '[/var/log/syslog]' | sudo tee -a /etc/awslogs/awslogs.conf
-  echo 'file = /var/log/syslog' | sudo tee -a /etc/awslogs/awslogs.conf
-  echo 'log_group_name = /aws/ec2/syslog' | sudo tee -a /etc/awslogs/awslogs.conf
-  echo 'log_stream_name = {instance_id}' | sudo tee -a /etc/awslogs/awslogs.conf
-  sudo systemctl restart awslogsd
-EOF
-)
 }
 
 resource "aws_autoscaling_group" "app_asg" {
