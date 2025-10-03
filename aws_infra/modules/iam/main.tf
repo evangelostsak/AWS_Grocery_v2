@@ -33,6 +33,9 @@ resource "aws_iam_policy" "s3_access" {
 			}
 		]
 	})
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-s3-access"
+	})
 }
 
 resource "aws_iam_role_policy_attachment" "attach_s3" {
