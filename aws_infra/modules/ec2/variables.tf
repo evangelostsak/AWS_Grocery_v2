@@ -8,6 +8,11 @@ variable "environment" {
 	type = string
 }
 
+variable "common_tags" {
+    type = map(string)
+    default = {}
+}
+
 variable "ami_id" {
 	type = string
 }
