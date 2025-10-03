@@ -50,5 +50,8 @@ resource "aws_cloudwatch_metric_alarm" "disk_usage" {
 		Filesystem           = var.disk_filesystem
 		MountPath            = var.disk_mount_path
 	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-disk-usage"
+	})
 }
 
