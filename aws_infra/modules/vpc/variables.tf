@@ -1,11 +1,11 @@
-variable "name_prefix" {
-	description = "Prefix for naming VPC related resources"
-	type        = string
+variable "project_name" {
+    description = "Project name used for naming resources"
+	type = string
 }
 
 variable "environment" {
 	description = "Environment name (dev/staging/prod)"
-	type        = string
+	type = string
 }
 
 variable "vpc_cidr" {
