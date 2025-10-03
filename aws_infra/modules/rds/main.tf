@@ -43,5 +43,8 @@ resource "aws_db_instance" "read_replica" {
 	monitoring_role_arn     = var.monitoring_role_arn
 	availability_zone       = var.read_replica_az
 	depends_on              = [aws_db_instance.primary]
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-db-replica"
+	})
 }
 
