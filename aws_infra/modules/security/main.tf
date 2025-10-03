@@ -6,9 +6,9 @@ resource "aws_security_group" "alb" {
 	name        = "${var.project_name}-${var.environment}-alb-sg"
 	description = "ALB security group"
 	vpc_id      = var.vpc_id
-	tags = {
+	tags = merge(local.merged_tags, {
 		Name = "${var.project_name}-${var.environment}-alb-sg"
-	}
+	})
 }
 
 resource "aws_security_group" "ec2" {
