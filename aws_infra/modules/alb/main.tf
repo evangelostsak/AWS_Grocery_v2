@@ -8,9 +8,9 @@ resource "aws_lb" "this" {
 	subnets            = var.subnet_ids
 	security_groups    = [var.security_group_id]
 	idle_timeout       = var.idle_timeout
-	tags = {
+	tags = merge(local.merged_tags, {
 		Name = "${var.project_name}-${var.environment}-alb"
-	}
+	})
 }
 
 resource "aws_lb_target_group" "this" {
