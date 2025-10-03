@@ -7,7 +7,7 @@ locals {
 }
 
 resource "aws_launch_template" "this" {
-  name_prefix   = "${var.name_prefix}-lt-"
+  name_prefix   = "${var.project_name}-${var.environment}-lt-"
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
@@ -23,14 +23,14 @@ resource "aws_launch_template" "this" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name        = "${var.name_prefix}-instance"
+      Name        = "${var.project_name}-${var.environment}-instance"
       Environment = var.environment
     }
   }
 }
 
 resource "aws_autoscaling_group" "this" {
-  name                      = "${var.name_prefix}-asg"
+  name                      = "${var.project_name}-${var.environment}-asg"
   min_size                  = var.min_size
   max_size                  = var.max_size
   desired_capacity          = var.desired_capacity
@@ -46,7 +46,7 @@ resource "aws_autoscaling_group" "this" {
 
   tag {
     key                 = "Name"
-    value               = "${var.name_prefix}-instance"
+    value               = "${var.project_name}-${var.environment}-instance"
     propagate_at_launch = true
   }
 }
