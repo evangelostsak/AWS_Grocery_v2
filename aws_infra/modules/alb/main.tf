@@ -27,9 +27,9 @@ resource "aws_lb_target_group" "this" {
 		healthy_threshold   = var.health_check_healthy_threshold
 		unhealthy_threshold = var.health_check_unhealthy_threshold
 	}
-	tags = {
+	tags = merge(local.merged_tags, {
 		Name = "${var.project_name}-${var.environment}-tg"
-	}
+	})
 }
 
 resource "aws_lb_listener" "http" {
