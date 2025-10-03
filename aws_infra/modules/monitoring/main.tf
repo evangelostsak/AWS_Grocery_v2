@@ -4,6 +4,9 @@
 
 resource "aws_sns_topic" "alerts" {
 	name = "${var.project_name}-${var.environment}-alerts"
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-alerts"
+	})
 }
 
 resource "aws_sns_topic_subscription" "email" {
