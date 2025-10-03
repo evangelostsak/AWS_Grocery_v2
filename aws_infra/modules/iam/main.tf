@@ -62,6 +62,9 @@ resource "aws_iam_role" "rds_monitoring" {
 			Action = "sts:AssumeRole"
 		}]
 	})
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-rds-monitoring-role"
+	})
 }
 
 resource "aws_iam_role_policy_attachment" "rds_monitoring_policy" {
