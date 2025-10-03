@@ -12,6 +12,9 @@ resource "aws_iam_role" "ec2_role" {
 			Action = "sts:AssumeRole"
 		}]
 	})
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-ec2-role"
+	})
 }
 
 resource "aws_iam_policy" "s3_access" {
