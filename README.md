@@ -20,7 +20,7 @@ A full architecture diagram has been designed showing:
 - S3 access outside the VPC  
 - CloudWatch → Alarm → SNS → Email alert flow
 
-![Architecture](./infrastructure/grocery.png)
+![Architecture](./aws_infra/grocery.png)
 
 ---
 
