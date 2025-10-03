@@ -25,6 +25,9 @@ resource "aws_db_instance" "primary" {
 	db_subnet_group_name    = aws_db_subnet_group.this.name
 	publicly_accessible     = false
 	vpc_security_group_ids  = [var.rds_security_group_id]
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-db"
+	})
 }
 
 resource "aws_db_instance" "read_replica" {
