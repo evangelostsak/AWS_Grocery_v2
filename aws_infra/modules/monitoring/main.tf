@@ -28,6 +28,9 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 	alarm_actions       = [aws_sns_topic.alerts.arn]
 	ok_actions          = [aws_sns_topic.alerts.arn]
 	dimensions = { AutoScalingGroupName = var.asg_name }
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-high-cpu"
+	})
 }
 
 resource "aws_cloudwatch_metric_alarm" "disk_usage" {
