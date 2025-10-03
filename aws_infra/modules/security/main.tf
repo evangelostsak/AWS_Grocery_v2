@@ -3,29 +3,29 @@
 ############################################
 
 resource "aws_security_group" "alb" {
-	name        = "${var.name_prefix}-alb-sg"
+	name        = "${var.project_name}-${var.environment}-alb-sg"
 	description = "ALB security group"
 	vpc_id      = var.vpc_id
 	tags = {
-		Name = "${var.name_prefix}-alb-sg"
+		Name = "${var.project_name}-${var.environment}-alb-sg"
 	}
 }
 
 resource "aws_security_group" "ec2" {
-	name        = "${var.name_prefix}-ec2-sg"
+	name        = "${var.project_name}-${var.environment}-ec2-sg"
 	description = "EC2/ASG security group"
 	vpc_id      = var.vpc_id
 	tags = {
-		Name = "${var.name_prefix}-ec2-sg"
+		Name = "${var.project_name}-${var.environment}-ec2-sg"
 	}
 }
 
 resource "aws_security_group" "rds" {
-	name        = "${var.name_prefix}-rds-sg"
+	name        = "${var.project_name}-${var.environment}-rds-sg"
 	description = "RDS security group"
 	vpc_id      = var.vpc_id
 	tags = {
-		Name = "${var.name_prefix}-rds-sg"
+		Name = "${var.project_name}-${var.environment}-rds-sg"
 	}
 }
 
