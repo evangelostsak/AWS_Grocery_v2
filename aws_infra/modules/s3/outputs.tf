@@ -13,3 +13,6 @@ output "bucket_name" {
 	value       = aws_s3_bucket.this.bucket
 }
 
+output "lambda_layer_s3_key" {
+  value = aws_s3_object.layer_image.key
+}
