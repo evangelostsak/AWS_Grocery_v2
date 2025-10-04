@@ -116,3 +116,29 @@ module "monitoring" {
   cpu_threshold = var.cpu_alarm_threshold
   disk_threshold = var.disk_alarm_threshold
 }
+
+# --- Step Functions ---
+module "step_functions" {
+  source                     = "../../modules/step_functions"
+  project_name               = var.project_name
+  environment                = var.environment
+  state_machine_name         = "${var.project_name}-${var.environment}-db-restore-step-function"
+  sfn_role_arn               = module.iam.sfn_role_arn
+  step_function_log_group_arn = module.monitoring.step_function_log_group_arn
+  db_identifier              = var.db_name
+  bucket_name                = module.s3.bucket_name
+  db_dump_s3_key             = local.db_dump_s3_key
+  lambda_function_arn        = module.lambda.lambda_function_arn
+}
+
+# --- Event Bridge ---
+module "event_bridge" {
+  source               = "../../modules/event_bridge"
+  project_name         = var.project_name
+  environment          = var.environment
+  rule_name            = "${var.project_name}-${var.environment}-s3-dump-uploaded"
+  bucket_name          = module.s3.bucket_name
+  db_dump_s3_key       = local.db_dump_s3_key
+  state_machine_arn    = module.step_functions.state_machine_arn
+  eventbridge_role_arn = module.iam.eventbridge_role_arn
+}
