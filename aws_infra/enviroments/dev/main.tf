@@ -46,6 +46,13 @@ module "iam" {
   project_name        = var.project_name
   environment         = var.environment
   s3_bucket_arn       = module.s3.bucket_arn
+  bucket_name         = module.s3.bucket_name
+  db_dump_s3_key      = local.db_dump_s3_key
+  rds_arn             = module.rds.primary_arn
+  lambda_function_arn = module.lambda.lambda_function_arn
+  state_machine_arn   = module.step_functions.state_machine_arn
+  step_function_log_group_arn = module.monitoring.step_function_log_group_arn
+  iam_lambda_role_name = "${var.project_name}-${var.environment}-lambda-role"
 }
 
 # --- ALB ---
