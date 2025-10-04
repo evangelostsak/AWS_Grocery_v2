@@ -26,6 +26,16 @@ variable "versioning_enabled" {
 	default = true
 }
 
+variable "lifecycle_status" {
+    description = "Lifecycle rule status (Enabled/Disabled)"
+    type        = string
+}
+
+variable "expiration_days" {
+    description = "Number of days after which objects expire"
+    type        = number
+}
+
 variable "db_dump_prefix" {
     description = "Prefix for database dump files in the S3 bucket"
     type        = string
