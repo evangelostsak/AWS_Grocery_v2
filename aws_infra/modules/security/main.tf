@@ -51,6 +51,17 @@ resource "aws_security_group_rule" "alb_to_ec2" {
 	security_group_id        = aws_security_group.alb.id
 }
 
+# EC2 security group
+resource "aws_security_group" "ec2" {
+	name        = "${var.project_name}-${var.environment}-ec2-sg"
+	description = "EC2/ASG security group"
+	vpc_id      = var.vpc_id
+
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-ec2-sg"
+	})
+}
+
 # EC2 ingress from ALB
 resource "aws_security_group_rule" "ec2_from_alb" {
 	type                     = "ingress"
