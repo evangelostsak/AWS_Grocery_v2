@@ -7,14 +7,10 @@ provider "aws" {
   profile = var.profile
 }
 
-locals {
-  name_prefix = "${var.app_name}-${var.environment}"
-}
-
 # --- VPC ---
 module "vpc" {
   source               = "../../modules/vpc"
-  name_prefix          = local.name_prefix
+  project_name         = var.project_name  
   environment          = var.environment
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
