@@ -14,14 +14,14 @@ resource "aws_lambda_layer_version" "my_layer" {
 
 # Lambda function 
 resource "aws_lambda_function" "db_populator" {
-  function_name = "${var.project_name}-${var.environment}-db-populator"
-  role          = var.iam_lambda_role_arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.12"
-  timeout       = 60
-  filename      = var.lambda_zip_file
+  function_name    = "${var.project_name}-${var.environment}-db-populator"
+  role             = var.iam_lambda_role_arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.12"
+  timeout          = 60
+  filename         = var.lambda_zip_file
   source_code_hash = filebase64sha256(var.lambda_zip_file)
-  layers        = [aws_lambda_layer_version.my_layer.arn]
+  layers           = [aws_lambda_layer_version.my_layer.arn]
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
