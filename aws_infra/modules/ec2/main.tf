@@ -3,7 +3,12 @@
 ############################################
 
 locals {
-  user_data_rendered = var.user_data != "" ? var.user_data : base64encode(templatefile(var.default_user_data_template_path, {}))
+  user_data_rendered = var.user_data != "" ? var.user_data : base64encode(templatefile(var.default_user_data_template_path, {
+    region             = data.region.current.name
+    ecr_repository_url = var.ecr_repository_url
+    image_tag          = var.image_tag
+    ecr_domain         = split("/", var.ecr_repository_url)[0]
+  }))
 }
 
 resource "aws_launch_template" "this" {

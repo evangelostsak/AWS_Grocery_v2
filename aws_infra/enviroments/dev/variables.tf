@@ -147,3 +147,23 @@ variable "disk_alarm_threshold" {
 variable "bucket_prefix" {
 	type    = string
 }
+
+variable "db_dump_prefix" {
+    description = "Prefix for database dump files in the S3 bucket"
+    type        = string
+}
+
+variable "db_dump_filename" {
+    description = "Database dump file name"
+    type        = string
+}
+
+variable "layer_filename" {
+    description = "Layer file name"
+    type        = string
+}
+
+variable "layer_prefix" {
+    description = "Prefix for Lambda layer files in the S3 bucket"
+    type        = string
+}

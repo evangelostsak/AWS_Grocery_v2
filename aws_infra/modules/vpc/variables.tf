@@ -33,3 +33,7 @@ variable "availability_zones" {
 	type        = list(string)
 }
 
+variable "aws_region" {
+    description = "AWS region for the VPC"
+    type        = string
+}
