@@ -82,3 +82,12 @@ variable "inline_user_data_base64" {
 	default = false
 }
 
+variable "ecr_repository_url" {
+  type = string
+}
+
+variable "image_tag" {
+  type    = string
+  default = "latest"
+}
+
