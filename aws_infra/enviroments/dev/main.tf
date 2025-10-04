@@ -34,6 +34,8 @@ module "s3" {
   source              = "../../modules/s3"
   project_name        = var.project_name
   environment         = var.environment
+  lifecycle_status    = var.lifecycle_status
+  expiration_days     = var.expiration_days
   bucket_prefix       = var.bucket_prefix
 
 }
