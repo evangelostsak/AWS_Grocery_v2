@@ -55,9 +55,9 @@ resource "aws_route_table" "public" {
 		cidr_block = "0.0.0.0/0"
 		gateway_id = aws_internet_gateway.this.id
 	}
-	tags = {
+	tags = merge(local.merged_tags, {
 		Name = "${var.project_name}-${var.environment}-public-rt"
-	}
+	})
 }
 
 resource "aws_route_table_association" "public" {
