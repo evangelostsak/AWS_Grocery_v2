@@ -62,7 +62,7 @@ module "alb" {
 # --- EC2 / ASG ---
 module "ec2" {
   source                 = "../../modules/ec2"
-  name_prefix            = local.name_prefix
+  project_name           = var.project_name
   environment            = var.environment
   ami_id                 = var.ami_id
   instance_type          = var.instance_type
