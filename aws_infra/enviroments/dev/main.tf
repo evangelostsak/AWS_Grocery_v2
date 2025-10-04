@@ -38,7 +38,35 @@ module "s3" {
   lifecycle_status    = var.lifecycle_status
   expiration_days     = var.expiration_days
   bucket_prefix       = var.bucket_prefix
+  db_dump_prefix      = var.db_dump_prefix
+  avatar_prefix       = "avatars"
+  avatar_filename     = "user_default.png"
+  avatar_path         = "../../backend/avatar/user_default.png"
+  layer_prefix        = var.layer_prefix
+  layer_filename      = var.layer_filename
+  layer_path          = "../../layers/${var.layer_filename}"
+  ec2_iam_role_arn    = module.iam.ec2_role_arn
+  lambda_iam_role_arn = module.iam.lambda_iam_role_arn
+}
 
+# --- Lambda ---
+module "lambda" {
+  source                 = "../../modules/lambda"
+  project_name           = var.project_name
+  environment            = var.environment
+  bucket_name            = module.s3.bucket_name
+  lambda_layer_s3_key    = local.lambda_layer_s3_key
+  lambda_zip_file        = "../../lambda_handler/lambda_function.zip"
+  iam_lambda_role_arn    = module.iam.lambda_iam_role_arn
+  private_subnet_ids     = module.vpc.private_subnet_ids
+  lambda_security_group_id = module.security.ec2_sg_id
+  rds_host               = module.rds.primary_endpoint
+  rds_port               = var.db_port
+  db_name                = var.db_name
+  db_username            = var.db_user
+  rds_password           = var.db_pass
+  db_dump_s3_key         = local.db_dump_s3_key
+  region                 = var.region
 }
 
 # --- IAM ---
