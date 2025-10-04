@@ -31,8 +31,11 @@ module "security" {
 
 # --- S3 ---
 module "s3" {
-  source        = "../../modules/s3"
-  bucket_prefix = "${local.name_prefix}-data"
+  source              = "../../modules/s3"
+  project_name        = var.project_name
+  environment         = var.environment
+  bucket_prefix       = var.bucket_prefix
+
 }
 
 # --- IAM ---
