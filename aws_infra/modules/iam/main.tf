@@ -214,3 +214,89 @@ resource "aws_iam_role_policy_attachment" "lambda_logging_attach" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.lambda_logging_policy.arn
 }
+
+############################################
+# STEP FUNCTIONS ROLE & POLICY (MOVED)
+############################################
+
+resource "aws_iam_role" "sfn_role" {
+  name = "${var.project_name}-${var.environment}-step-functions-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "states.amazonaws.com" }
+    }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-sfn-role" })
+}
+
+resource "aws_iam_policy" "sfn_policy" {
+  name        = "${var.project_name}-${var.environment}-step-functions-policy"
+  description = "Policy for Step Functions to inspect RDS/S3 and invoke Lambda"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      { Effect = "Allow", Action = ["rds:DescribeDBInstances"], Resource = var.rds_arn },
+      { Effect = "Allow", Action = ["s3:GetObject", "s3:HeadObject"], Resource = "arn:aws:s3:::${var.bucket_name}/${var.db_dump_s3_key}" },
+      { Effect = "Allow", Action = ["lambda:InvokeFunction"], Resource = var.lambda_function_arn },
+      { Effect = "Allow", Action = [
+          "logs:CreateLogGroup","logs:CreateLogDelivery","logs:GetLogDelivery","logs:UpdateLogDelivery","logs:DeleteLogDelivery","logs:ListLogDeliveries","logs:PutResourcePolicy","logs:PutRetentionPolicy","logs:DescribeResourcePolicies","logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"
+        ], Resource = "*" }
+    ]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-sfn-policy" })
+}
+
+resource "aws_iam_role_policy_attachment" "sfn_attach" {
+  role       = aws_iam_role.sfn_role.name
+  policy_arn = aws_iam_policy.sfn_policy.arn
+}
+
+############################################
+# EVENTBRIDGE ROLE & POLICIES (MOVED)
+############################################
+
+resource "aws_iam_role" "eventbridge_step_function_role" {
+  name = "${var.project_name}-${var.environment}-eventbridge-step-function-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+    }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-role" })
+}
+
+resource "aws_iam_policy" "eventbridge_step_function_policy" {
+  name        = "${var.project_name}-${var.environment}-eventbridge-sfn-policy"
+  description = "Allows EventBridge to start the Step Functions state machine."
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "states:StartExecution", Resource = var.state_machine_arn }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-sfn-policy" })
+}
+
+resource "aws_iam_policy" "eventbridge_logging_policy" {
+  name        = "${var.project_name}-${var.environment}-eventbridge-logging-policy"
+  description = "Allows EventBridge to write logs to CloudWatch."
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"], Resource = var.step_function_log_group_arn }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-logging-policy" })
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_step_function_attach" {
+  role       = aws_iam_role.eventbridge_step_function_role.name
+  policy_arn = aws_iam_policy.eventbridge_step_function_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_logging_attach" {
+  role       = aws_iam_role.eventbridge_step_function_role.name
+  policy_arn = aws_iam_policy.eventbridge_logging_policy.arn
+}
