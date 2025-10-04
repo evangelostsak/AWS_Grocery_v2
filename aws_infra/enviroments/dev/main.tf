@@ -40,9 +40,10 @@ module "s3" {
 
 # --- IAM ---
 module "iam" {
-  source        = "../../modules/iam"
-  name_prefix   = local.name_prefix
-  s3_bucket_arn = module.s3.bucket_arn
+  source              = "../../modules/iam"
+  project_name        = var.project_name
+  environment         = var.environment
+  s3_bucket_arn       = module.s3.bucket_arn
 }
 
 # --- ALB ---
