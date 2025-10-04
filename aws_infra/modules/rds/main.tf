@@ -3,9 +3,11 @@
 ############################################
 
 resource "aws_db_subnet_group" "this" {
-	name       = "${var.name_prefix}-db-subnet-group"
+	name       = "${var.project_name}-${var.environment}-db-subnet-group"
 	subnet_ids = var.private_subnet_ids
-	tags = { Name = "${var.name_prefix}-db-subnets" }
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-db-subnets"
+	})
 }
 
 resource "aws_db_instance" "primary" {
@@ -25,6 +27,9 @@ resource "aws_db_instance" "primary" {
 	db_subnet_group_name    = aws_db_subnet_group.this.name
 	publicly_accessible     = false
 	vpc_security_group_ids  = [var.rds_security_group_id]
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-db"
+	})
 }
 
 resource "aws_db_instance" "read_replica" {
@@ -40,5 +45,8 @@ resource "aws_db_instance" "read_replica" {
 	monitoring_role_arn     = var.monitoring_role_arn
 	availability_zone       = var.read_replica_az
 	depends_on              = [aws_db_instance.primary]
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-db-replica"
+	})
 }
 

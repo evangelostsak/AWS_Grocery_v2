@@ -6,17 +6,16 @@ resource "aws_vpc" "this" {
 	cidr_block           = var.vpc_cidr
 	enable_dns_support   = true
 	enable_dns_hostnames = true
-	tags = {
-		Name = "${var.name_prefix}-vpc"
-		Environment = var.environment
-	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-vpc"
+	})
 }
 
 resource "aws_internet_gateway" "this" {
 	vpc_id = aws_vpc.this.id
-	tags = {
-		Name = "${var.name_prefix}-igw"
-	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-igw"
+	})
 }
 
 # Public Subnets
@@ -29,10 +28,10 @@ resource "aws_subnet" "public" {
 	cidr_block              = each.value.cidr
 	availability_zone       = each.value.az
 	map_public_ip_on_launch = true
-	tags = {
-		Name = "${var.name_prefix}-public-${each.key}"
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-public-${each.key}"
 		Tier = "public"
-	}
+	})
 }
 
 # Private Subnets
@@ -44,10 +43,10 @@ resource "aws_subnet" "private" {
 	vpc_id            = aws_vpc.this.id
 	cidr_block        = each.value.cidr
 	availability_zone = each.value.az
-	tags = {
-		Name = "${var.name_prefix}-private-${each.key}"
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-private-${each.key}"
 		Tier = "private"
-	}
+	})
 }
 
 resource "aws_route_table" "public" {
@@ -56,9 +55,9 @@ resource "aws_route_table" "public" {
 		cidr_block = "0.0.0.0/0"
 		gateway_id = aws_internet_gateway.this.id
 	}
-	tags = {
-		Name = "${var.name_prefix}-public-rt"
-	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-public-rt"
+	})
 }
 
 resource "aws_route_table_association" "public" {

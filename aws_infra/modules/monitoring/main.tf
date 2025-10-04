@@ -3,7 +3,10 @@
 ############################################
 
 resource "aws_sns_topic" "alerts" {
-	name = "${var.name_prefix}-alerts"
+	name = "${var.project_name}-${var.environment}-alerts"
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-alerts"
+	})
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -13,7 +16,7 @@ resource "aws_sns_topic_subscription" "email" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-	alarm_name          = "${var.name_prefix}-high-cpu"
+	alarm_name          = "${var.project_name}-${var.environment}-high-cpu"
 	comparison_operator = "GreaterThanThreshold"
 	evaluation_periods  = 2
 	metric_name         = "CPUUtilization"
@@ -25,10 +28,13 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 	alarm_actions       = [aws_sns_topic.alerts.arn]
 	ok_actions          = [aws_sns_topic.alerts.arn]
 	dimensions = { AutoScalingGroupName = var.asg_name }
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-high-cpu"
+	})
 }
 
 resource "aws_cloudwatch_metric_alarm" "disk_usage" {
-	alarm_name          = "${var.name_prefix}-disk-usage"
+	alarm_name          = "${var.project_name}-${var.environment}-disk-usage"
 	comparison_operator = "GreaterThanThreshold"
 	evaluation_periods  = 2
 	metric_name         = "disk_used_percent"
@@ -44,5 +50,8 @@ resource "aws_cloudwatch_metric_alarm" "disk_usage" {
 		Filesystem           = var.disk_filesystem
 		MountPath            = var.disk_mount_path
 	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-disk-usage"
+	})
 }
 

@@ -7,10 +7,9 @@ variable "region" {
 
 variable "profile" {
 	type    = string
-	default = "tsakos"
 }
 
-variable "app_name" {
+variable "project_name" {
 	type    = string
 	default = "grocery"
 }
@@ -106,7 +105,6 @@ variable "asg_health_check_grace_period" {
 
 variable "db_name" {
 	type    = string
-	default = "grocerydb"
 }
 
 variable "db_user" {
@@ -144,4 +142,8 @@ variable "cpu_alarm_threshold" {
 variable "disk_alarm_threshold" {
 	type    = number
 	default = 80
+}
+
+variable "bucket_prefix" {
+	type    = string
 }

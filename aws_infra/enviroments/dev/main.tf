@@ -7,14 +7,10 @@ provider "aws" {
   profile = var.profile
 }
 
-locals {
-  name_prefix = "${var.app_name}-${var.environment}"
-}
-
 # --- VPC ---
 module "vpc" {
   source               = "../../modules/vpc"
-  name_prefix          = local.name_prefix
+  project_name         = var.project_name  
   environment          = var.environment
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
@@ -24,31 +20,37 @@ module "vpc" {
 
 # --- Security ---
 module "security" {
-  source           = "../../modules/security"
-  name_prefix      = local.name_prefix
-  vpc_id           = module.vpc.vpc_id
-  allowed_ssh_cidr = var.allowed_ssh_cidr
-  app_port         = var.app_port
-  db_port          = var.db_port
+  source               = "../../modules/security"
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_id               = module.vpc.vpc_id
+  allowed_ssh_cidr     = var.allowed_ssh_cidr
+  app_port             = var.app_port
+  db_port              = var.db_port
 }
 
 # --- S3 ---
 module "s3" {
-  source        = "../../modules/s3"
-  bucket_prefix = "${local.name_prefix}-data"
+  source              = "../../modules/s3"
+  project_name        = var.project_name
+  environment         = var.environment
+  bucket_prefix       = var.bucket_prefix
+
 }
 
 # --- IAM ---
 module "iam" {
-  source        = "../../modules/iam"
-  name_prefix   = local.name_prefix
-  s3_bucket_arn = module.s3.bucket_arn
+  source              = "../../modules/iam"
+  project_name        = var.project_name
+  environment         = var.environment
+  s3_bucket_arn       = module.s3.bucket_arn
 }
 
 # --- ALB ---
 module "alb" {
   source              = "../../modules/alb"
-  name_prefix         = local.name_prefix
+  project_name        = var.project_name
+  environment         = var.environment
   vpc_id              = module.vpc.vpc_id
   subnet_ids          = module.vpc.public_subnet_ids
   security_group_id   = module.security.alb_sg_id
@@ -60,7 +62,7 @@ module "alb" {
 # --- EC2 / ASG ---
 module "ec2" {
   source                 = "../../modules/ec2"
-  name_prefix            = local.name_prefix
+  project_name           = var.project_name
   environment            = var.environment
   ami_id                 = var.ami_id
   instance_type          = var.instance_type
@@ -79,7 +81,8 @@ module "ec2" {
 # --- RDS ---
 module "rds" {
   source                 = "../../modules/rds"
-  name_prefix            = local.name_prefix
+  project_name           = var.project_name
+  environment            = var.environment
   db_name                = var.db_name
   db_user                = var.db_user
   db_pass                = var.db_pass
@@ -94,7 +97,8 @@ module "rds" {
 # --- Monitoring ---
 module "monitoring" {
   source        = "../../modules/monitoring"
-  name_prefix   = local.name_prefix
+  environment   = var.environment
+  project_name  = var.project_name
   asg_name      = module.ec2.asg_name
   alert_email   = var.alert_email
   cpu_threshold = var.cpu_alarm_threshold

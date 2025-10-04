@@ -3,18 +3,18 @@
 ############################################
 
 resource "aws_lb" "this" {
-	name               = "${var.name_prefix}-alb"
+	name               = "${var.project_name}-${var.environment}-alb"
 	load_balancer_type = "application"
 	subnets            = var.subnet_ids
 	security_groups    = [var.security_group_id]
 	idle_timeout       = var.idle_timeout
-	tags = {
-		Name = "${var.name_prefix}-alb"
-	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-alb"
+	})
 }
 
 resource "aws_lb_target_group" "this" {
-	name     = "${var.name_prefix}-tg"
+	name     = "${var.project_name}-${var.environment}-tg"
 	port     = var.target_port
 	protocol = "HTTP"
 	vpc_id   = var.vpc_id
@@ -27,9 +27,9 @@ resource "aws_lb_target_group" "this" {
 		healthy_threshold   = var.health_check_healthy_threshold
 		unhealthy_threshold = var.health_check_unhealthy_threshold
 	}
-	tags = {
-		Name = "${var.name_prefix}-tg"
-	}
+	tags = merge(local.merged_tags, {
+		Name = "${var.project_name}-${var.environment}-tg"
+	})
 }
 
 resource "aws_lb_listener" "http" {
