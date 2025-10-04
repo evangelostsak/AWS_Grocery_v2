@@ -55,3 +55,46 @@ resource "aws_cloudwatch_metric_alarm" "disk_usage" {
 	})
 }
 
+############################################
+# Cloudwatch - LOG GROUPS 
+############################################
+
+# Lambda log group
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+	name              = "/aws/lambda/db_populator"
+	retention_in_days = 7
+	tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-lambda-log" })
+}
+
+# Step Function log group
+resource "aws_cloudwatch_log_group" "step_function_log_group" {
+	name              = "/aws/vendedlogs/states/db-restore-step-function"
+	retention_in_days = 7
+	tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-sfn-log" })
+}
+
+# Resource policy to allow Step Functions to write to CloudWatch Logs
+resource "aws_cloudwatch_log_resource_policy" "step_function_log_policy" {
+	policy_name     = "StepFunctionLogPolicy"
+	policy_document = jsonencode({
+		Version = "2012-10-17"
+		Statement = [
+			{
+				Effect = "Allow"
+				Principal = { Service = "states.amazonaws.com" }
+				Action = [
+					"logs:CreateLogGroup",
+					"logs:CreateLogStream",
+					"logs:PutLogEvents",
+					"logs:CreateLogDelivery",
+					"logs:GetLogDelivery",
+					"logs:UpdateLogDelivery",
+					"logs:DeleteLogDelivery",
+					"logs:ListLogDeliveries"
+				]
+				Resource = "arn:aws:logs:*:*:*"
+			}
+		]
+	})
+}
+
