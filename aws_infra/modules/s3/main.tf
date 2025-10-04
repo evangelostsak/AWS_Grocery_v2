@@ -10,6 +10,13 @@ resource "aws_s3_bucket" "this" {
 	})
 }
 
+# Enable S3 to Send Events to EventBridge
+resource "aws_s3_bucket_notification" "s3_to_eventbridge" {
+  bucket = aws_s3_bucket.this.id
+
+  eventbridge = true
+}
+
 resource "aws_s3_bucket_versioning" "this" {
 	bucket = aws_s3_bucket.this.id
 	versioning_configuration { status = var.versioning_enabled ? "Enabled" : "Suspended" }
