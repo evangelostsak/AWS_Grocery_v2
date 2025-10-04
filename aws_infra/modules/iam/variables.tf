@@ -17,3 +17,18 @@ variable "s3_bucket_arn" {
 	type = string
 }
 
+variable "iam_lambda_role_name" {
+    type = string
+}
+
+variable "bucket_name" {
+    type = string
+}
+
+variable "db_dump_s3_key" {
+    type = string
+}
+
+variable "rds_arn" {
+    type = string
+}
