@@ -28,10 +28,10 @@ resource "aws_subnet" "public" {
 	cidr_block              = each.value.cidr
 	availability_zone       = each.value.az
 	map_public_ip_on_launch = true
-	tags = {
+	tags = merge(local.merged_tags, {
 		Name = "${var.project_name}-${var.environment}-public-${each.key}"
 		Tier = "public"
-	}
+	})
 }
 
 # Private Subnets
