@@ -1,33 +1,33 @@
 variable "project_name" {
-    description = "Project name used for naming resources"
-	type = string
+  description = "Project name used for naming resources"
+  type        = string
 }
 
 variable "environment" {
-	description = "Environment name (dev/staging/prod)"
-	type = string
+  description = "Environment name (dev/staging/prod)"
+  type        = string
 }
 
 variable "common_tags" {
-    type = map(string)
-    default = {}
+  type    = map(string)
+  default = {}
 }
 
 variable "vpc_id" {
-	type = string
+  type = string
 }
 
 variable "allowed_ssh_cidr" {
-	type = string
+  type = string
 }
 
 variable "app_port" {
-	type    = number
-	default = 5000
+  type    = number
+  default = 5000
 }
 
 variable "db_port" {
-	type    = number
-	default = 5432
+  type    = number
+  default = 5432
 }
 

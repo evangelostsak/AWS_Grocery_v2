@@ -1,53 +1,62 @@
 variable "project_name" {
-    description = "Project name used for naming resources"
-	type = string
+  description = "Project name used for naming resources"
+  type        = string
 }
 
 variable "environment" {
-	description = "Environment name (dev/staging/prod)"
-	type = string
+  description = "Environment name (dev/staging/prod)"
+  type        = string
 }
 
 variable "common_tags" {
-    type = map(string)
-    default = {}
+  description = "Additional user-specified tags to merge with enforced tags"
+  type        = map(string)
+  default     = {}
 }
 
 variable "asg_name" {
-	type = string
+  description = "Name of the Auto Scaling Group whose metrics are monitored"
+  type        = string
 }
 
 variable "alert_email" {
-	type = string
+  description = "Email address subscribed to the SNS alerts topic"
+  type        = string
 }
 
 variable "cpu_threshold" {
-	type    = number
-	default = 80
+  description = "Average CPU utilization (%) threshold to trigger alarm"
+  type        = number
+  default     = 80
 }
 
 variable "cpu_period" {
-	type    = number
-	default = 300
+  description = "Evaluation period (seconds) for CPU metric"
+  type        = number
+  default     = 300
 }
 
 variable "disk_threshold" {
-	type    = number
-	default = 80
+  description = "Disk usage percent threshold to trigger alarm"
+  type        = number
+  default     = 80
 }
 
 variable "disk_period" {
-	type    = number
-	default = 300
+  description = "Evaluation period (seconds) for disk usage metric"
+  type        = number
+  default     = 300
 }
 
 variable "disk_filesystem" {
-	type    = string
-	default = "/dev/xvda1"
+  description = "Filesystem device name reported by CloudWatch Agent"
+  type        = string
+  default     = "/dev/xvda1"
 }
 
 variable "disk_mount_path" {
-	type    = string
-	default = "/"
+  description = "Mount path corresponding to the monitored filesystem"
+  type        = string
+  default     = "/"
 }
 

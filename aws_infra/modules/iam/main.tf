@@ -4,46 +4,46 @@
 
 # EC2 IAM Role
 resource "aws_iam_role" "ec2_role" {
-	name = "${var.project_name}-${var.environment}-ec2-role"
-	assume_role_policy = jsonencode({
-		Version = "2012-10-17"
-		Statement = [{
-			Effect = "Allow"
-			Principal = { Service = "ec2.amazonaws.com" }
-			Action = "sts:AssumeRole"
-		}]
-	})
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-ec2-role"
-	})
+  name = "${var.project_name}-${var.environment}-ec2-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+  tags = merge(local.merged_tags, {
+    Name = "${var.project_name}-${var.environment}-ec2-role"
+  })
 }
 
 # S3 Access Policy for EC2 Role
 resource "aws_iam_policy" "s3_access" {
-	name        = "${var.project_name}-${var.environment}-s3-access"
-	description = "Allow EC2 instances to access application S3 bucket"
-	policy = jsonencode({
-		Version = "2012-10-17",
-		Statement = [
-			{
-				Effect = "Allow",
-				Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket","s3:DeleteObject"],
-				Resource = [
-					var.s3_bucket_arn,
-					"${var.s3_bucket_arn}/*"
-				]
-			}
-		]
-	})
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-s3-access"
-	})
+  name        = "${var.project_name}-${var.environment}-s3-access"
+  description = "Allow EC2 instances to access application S3 bucket"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"],
+        Resource = [
+          var.s3_bucket_arn,
+          "${var.s3_bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+  tags = merge(local.merged_tags, {
+    Name = "${var.project_name}-${var.environment}-s3-access"
+  })
 }
 
 # Attach S3 Access Policy
 resource "aws_iam_role_policy_attachment" "attach_s3" {
-	role       = aws_iam_role.ec2_role.name
-	policy_arn = aws_iam_policy.s3_access.arn
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = aws_iam_policy.s3_access.arn
 }
 
 # Attach AmazonEC2ContainerRegistryPullOnly Policy
@@ -53,11 +53,11 @@ resource "aws_iam_role_policy_attachment" "ecr_pull" {
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-	name = "${var.project_name}-${var.environment}-ec2-instance-profile"
-	role = aws_iam_role.ec2_role.name
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-ec2-instance-profile"
-	})
+  name = "${var.project_name}-${var.environment}-ec2-instance-profile"
+  role = aws_iam_role.ec2_role.name
+  tags = merge(local.merged_tags, {
+    Name = "${var.project_name}-${var.environment}-ec2-instance-profile"
+  })
 }
 
 ############################################
@@ -65,23 +65,23 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 ############################################
 
 resource "aws_iam_role" "rds_monitoring" {
-	name = "${var.project_name}-${var.environment}-rds-monitoring-role"
-	assume_role_policy = jsonencode({
-		Version = "2012-10-17"
-		Statement = [{
-			Effect = "Allow"
-			Principal = { Service = "monitoring.rds.amazonaws.com" }
-			Action = "sts:AssumeRole"
-		}]
-	})
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-rds-monitoring-role"
-	})
+  name = "${var.project_name}-${var.environment}-rds-monitoring-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "monitoring.rds.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+  tags = merge(local.merged_tags, {
+    Name = "${var.project_name}-${var.environment}-rds-monitoring-role"
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "rds_monitoring_policy" {
-	role       = aws_iam_role.rds_monitoring.name
-	policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+  role       = aws_iam_role.rds_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }
 
 ############################################
@@ -213,4 +213,90 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_attach" {
 resource "aws_iam_role_policy_attachment" "lambda_logging_attach" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.lambda_logging_policy.arn
+}
+
+############################################
+# STEP FUNCTIONS ROLE & POLICY (MOVED)
+############################################
+
+resource "aws_iam_role" "sfn_role" {
+  name = "${var.project_name}-${var.environment}-step-functions-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "states.amazonaws.com" }
+    }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-sfn-role" })
+}
+
+resource "aws_iam_policy" "sfn_policy" {
+  name        = "${var.project_name}-${var.environment}-step-functions-policy"
+  description = "Policy for Step Functions to inspect RDS/S3 and invoke Lambda"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      { Effect = "Allow", Action = ["rds:DescribeDBInstances"], Resource = var.rds_arn },
+      { Effect = "Allow", Action = ["s3:GetObject", "s3:HeadObject"], Resource = "arn:aws:s3:::${var.bucket_name}/${var.db_dump_s3_key}" },
+      { Effect = "Allow", Action = ["lambda:InvokeFunction"], Resource = var.lambda_function_arn },
+      { Effect = "Allow", Action = [
+        "logs:CreateLogGroup", "logs:CreateLogDelivery", "logs:GetLogDelivery", "logs:UpdateLogDelivery", "logs:DeleteLogDelivery", "logs:ListLogDeliveries", "logs:PutResourcePolicy", "logs:PutRetentionPolicy", "logs:DescribeResourcePolicies", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"
+      ], Resource = "*" }
+    ]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-sfn-policy" })
+}
+
+resource "aws_iam_role_policy_attachment" "sfn_attach" {
+  role       = aws_iam_role.sfn_role.name
+  policy_arn = aws_iam_policy.sfn_policy.arn
+}
+
+############################################
+# EVENTBRIDGE ROLE & POLICIES (MOVED)
+############################################
+
+resource "aws_iam_role" "eventbridge_step_function_role" {
+  name = "${var.project_name}-${var.environment}-eventbridge-step-function-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+    }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-role" })
+}
+
+resource "aws_iam_policy" "eventbridge_step_function_policy" {
+  name        = "${var.project_name}-${var.environment}-eventbridge-sfn-policy"
+  description = "Allows EventBridge to start the Step Functions state machine."
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "states:StartExecution", Resource = var.state_machine_arn }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-sfn-policy" })
+}
+
+resource "aws_iam_policy" "eventbridge_logging_policy" {
+  name        = "${var.project_name}-${var.environment}-eventbridge-logging-policy"
+  description = "Allows EventBridge to write logs to CloudWatch."
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"], Resource = var.step_function_log_group_arn }]
+  })
+  tags = merge(local.merged_tags, { Name = "${var.project_name}-${var.environment}-eventbridge-logging-policy" })
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_step_function_attach" {
+  role       = aws_iam_role.eventbridge_step_function_role.name
+  policy_arn = aws_iam_policy.eventbridge_step_function_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_logging_attach" {
+  role       = aws_iam_role.eventbridge_step_function_role.name
+  policy_arn = aws_iam_policy.eventbridge_logging_policy.arn
 }

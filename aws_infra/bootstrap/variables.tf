@@ -13,15 +13,15 @@ variable "environment" {
   type        = string
 }
 
-variable "common_tags"{
-    description = "Common tags to apply to all resources"
-    type        = map(string)
+variable "common_tags" {
+  description = "Common tags to apply to all resources"
+  type        = map(string)
 }
 
 variable "restrict_by_tags" {
-    description = "Whether to restrict access by tags"
-    type        = bool
-    default     = false
+  description = "Whether to restrict access by tags"
+  type        = bool
+  default     = false
 }
 variable "github_org" {
   description = "GitHub organization or username for OIDC trust"
