@@ -22,3 +22,13 @@ output "lambda_iam_role_name" {
   value       = aws_iam_role.lambda_role.name
   description = "The name of the IAM role."
 }
+
+output "sfn_role_arn" {
+	description = "ARN of the Step Functions IAM role"
+	value       = aws_iam_role.sfn_role.arn
+}
+
+output "eventbridge_role_arn" {
+	description = "ARN of the EventBridge invocation role"
+	value       = aws_iam_role.eventbridge_step_function_role.arn
+}
