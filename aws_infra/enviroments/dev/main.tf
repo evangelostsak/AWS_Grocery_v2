@@ -20,12 +20,13 @@ module "vpc" {
 
 # --- Security ---
 module "security" {
-  source           = "../../modules/security"
-  name_prefix      = local.name_prefix
-  vpc_id           = module.vpc.vpc_id
-  allowed_ssh_cidr = var.allowed_ssh_cidr
-  app_port         = var.app_port
-  db_port          = var.db_port
+  source               = "../../modules/security"
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_id               = module.vpc.vpc_id
+  allowed_ssh_cidr     = var.allowed_ssh_cidr
+  app_port             = var.app_port
+  db_port              = var.db_port
 }
 
 # --- S3 ---
