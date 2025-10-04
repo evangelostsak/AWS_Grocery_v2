@@ -13,24 +13,6 @@ resource "aws_security_group" "alb" {
 	})
 }
 
-resource "aws_security_group" "ec2" {
-	name        = "${var.project_name}-${var.environment}-ec2-sg"
-	description = "EC2/ASG security group"
-	vpc_id      = var.vpc_id
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-ec2-sg"
-	})
-}
-
-resource "aws_security_group" "rds" {
-	name        = "${var.project_name}-${var.environment}-rds-sg"
-	description = "RDS security group"
-	vpc_id      = var.vpc_id
-	tags = merge(local.merged_tags, {
-		Name = "${var.project_name}-${var.environment}-rds-sg"
-	})
-}
-
 # ALB inbound HTTP
 resource "aws_security_group_rule" "alb_http_in" {
 	type              = "ingress"
