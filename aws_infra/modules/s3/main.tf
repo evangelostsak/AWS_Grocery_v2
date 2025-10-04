@@ -31,6 +31,23 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 	}
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "grocery_s3_lifecycle" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    id     = "expire-old-avatars"
+    status = var.lifecycle_status
+
+    filter {
+      prefix = var.avatar_prefix
+    }
+
+    expiration {
+      days = var.expiration_days
+    }
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "public_block" {
     bucket = aws_s3_bucket.this.id
 
