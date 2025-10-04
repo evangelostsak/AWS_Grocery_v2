@@ -13,3 +13,8 @@ output "disk_alarm_name" {
 	value       = aws_cloudwatch_metric_alarm.disk_usage.alarm_name
 }
 
+output "step_function_log_group_arn" {
+  description = "ARN of the Step Function CloudWatch log group"
+  value       = aws_cloudwatch_log_group.step_function_log_group.arn
+}
+
