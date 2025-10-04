@@ -143,3 +143,7 @@ variable "disk_alarm_threshold" {
 	type    = number
 	default = 80
 }
+
+variable "bucket_prefix" {
+	type    = string
+}
