@@ -7,10 +7,9 @@ variable "region" {
 
 variable "profile" {
 	type    = string
-	default = "tsakos"
 }
 
-variable "app_name" {
+variable "project_name" {
 	type    = string
 	default = "grocery"
 }
@@ -106,7 +105,6 @@ variable "asg_health_check_grace_period" {
 
 variable "db_name" {
 	type    = string
-	default = "grocerydb"
 }
 
 variable "db_user" {
