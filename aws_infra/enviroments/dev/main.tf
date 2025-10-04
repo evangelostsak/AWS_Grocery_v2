@@ -86,6 +86,8 @@ module "ec2" {
   desired_capacity       = var.asg_desired_capacity
   health_check_type      = var.asg_health_check_type
   health_check_grace_period = var.asg_health_check_grace_period
+  ecr_repository_url     = var.ecr_repository_url
+  image_tag              = var.image_tag
 }
 
 # --- RDS ---
