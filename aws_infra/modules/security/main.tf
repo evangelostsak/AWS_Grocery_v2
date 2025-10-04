@@ -112,13 +112,34 @@ resource "aws_security_group_rule" "rds_from_ec2" {
 	security_group_id        = aws_security_group.rds.id
 }
 
-# RDS egress all
-resource "aws_security_group_rule" "rds_all_out" {
-	type              = "egress"
-	from_port         = 0
-	to_port           = 0
-	protocol          = "-1"
-	cidr_blocks       = ["0.0.0.0/0"]
-	security_group_id = aws_security_group.rds.id
+# RDS ingress from Lambda
+resource "aws_security_group_rule" "rds_from_lambda" {
+	type                     = "ingress"
+	from_port                = var.db_port
+	to_port                  = var.db_port
+	protocol                 = "tcp"
+	source_security_group_id = aws_security_group.lambda_sg.id
+	security_group_id        = aws_security_group.rds.id
 }
 
+
+# Lambda security group
+resource "aws_security_group" "lambda_sg" {
+  name        = "${var.project_name}-${var.environment}-lambda-sg"
+  description = "Allow Lambda to connect to RDS and S3"
+  vpc_id      = var.vpc_id
+
+  tags = merge(local.merged_tags, {
+    Name = "${var.project_name}-${var.environment}-lambda-sg"
+  })
+}
+
+# Lambda egress to RDS and S3
+resource "aws_security_group_rule" "lambda_to_rds" {
+  type                     = "egress"
+  from_port                = var.db_port
+  to_port                  = var.db_port
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.rds.id
+  security_group_id        = aws_security_group.lambda_sg.id
+}
