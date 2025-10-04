@@ -81,7 +81,8 @@ module "ec2" {
 # --- RDS ---
 module "rds" {
   source                 = "../../modules/rds"
-  name_prefix            = local.name_prefix
+  project_name           = var.project_name
+  environment            = var.environment
   db_name                = var.db_name
   db_user                = var.db_user
   db_pass                = var.db_pass
