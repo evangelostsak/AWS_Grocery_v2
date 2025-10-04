@@ -2,6 +2,7 @@
 # IAM MODULE - EC2 to S3 ECR Roles, Policies, Instance Profile
 ############################################
 
+# EC2 IAM Role
 resource "aws_iam_role" "ec2_role" {
 	name = "${var.project_name}-${var.environment}-ec2-role"
 	assume_role_policy = jsonencode({
@@ -17,6 +18,7 @@ resource "aws_iam_role" "ec2_role" {
 	})
 }
 
+# S3 Access Policy for EC2 Role
 resource "aws_iam_policy" "s3_access" {
 	name        = "${var.project_name}-${var.environment}-s3-access"
 	description = "Allow EC2 instances to access application S3 bucket"
@@ -25,7 +27,7 @@ resource "aws_iam_policy" "s3_access" {
 		Statement = [
 			{
 				Effect = "Allow",
-				Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+				Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket","s3:DeleteObject"],
 				Resource = [
 					var.s3_bucket_arn,
 					"${var.s3_bucket_arn}/*"
