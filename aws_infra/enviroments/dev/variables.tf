@@ -184,6 +184,11 @@ variable "ecr_repository_url" {
   type        = string
 }
 
+variable "ecr_repository_name" {
+  description = "ECR repository name for application image"
+  type        = string
+}
+
 variable "image_tag" {
   description = "Container image tag to deploy on instances"
   type        = string

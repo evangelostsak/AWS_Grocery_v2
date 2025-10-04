@@ -7,6 +7,14 @@ provider "aws" {
   profile = var.profile
 }
 
+# --- ECR ---
+module "ecr" {
+  source       = "../../modules/ecr"
+  project_name = var.project_name
+  environment  = var.environment
+  repository_name = var.ecr_repository_name
+}
+
 # --- VPC ---
 module "vpc" {
   source               = "../../modules/vpc"
