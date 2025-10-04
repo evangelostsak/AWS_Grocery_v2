@@ -66,7 +66,6 @@ variable "alb_health_check_matcher" {
 
 variable "ami_id" {
 	type    = string
-	default = "ami-099b9a78992042e1f"
 }
 
 variable "instance_type" {
@@ -166,4 +165,27 @@ variable "layer_filename" {
 variable "layer_prefix" {
     description = "Prefix for Lambda layer files in the S3 bucket"
     type        = string
+}
+
+variable "lifecycle_status" {
+    description = "Lifecycle rule status (Enabled/Disabled)"
+    type        = string
+    default     = "Enabled"
+}
+
+variable "expiration_days" {
+    description = "Number of days after which objects expire"
+    type        = number
+    default     = 30
+}
+
+variable "ecr_repository_url" {
+	description = "ECR repository URL for application image"
+	type        = string
+}
+
+variable "image_tag" {
+	description = "Container image tag to deploy on instances"
+	type        = string
+	default     = "latest"
 }
