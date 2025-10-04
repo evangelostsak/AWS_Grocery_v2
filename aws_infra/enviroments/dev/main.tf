@@ -97,7 +97,8 @@ module "rds" {
 # --- Monitoring ---
 module "monitoring" {
   source        = "../../modules/monitoring"
-  name_prefix   = local.name_prefix
+  environment   = var.environment
+  project_name  = var.project_name
   asg_name      = module.ec2.asg_name
   alert_email   = var.alert_email
   cpu_threshold = var.cpu_alarm_threshold
