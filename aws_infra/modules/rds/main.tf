@@ -2,14 +2,6 @@
 # RDS MODULE
 ############################################
 
-resource "aws_db_subnet_group" "this" {
-  name       = "${var.project_name}-${var.environment}-db-subnet-group"
-  subnet_ids = var.private_subnet_ids
-  tags = merge(local.merged_tags, {
-    Name = "${var.project_name}-${var.environment}-db-subnets"
-  })
-}
-
 resource "aws_db_instance" "primary" {
   allocated_storage       = var.allocated_storage
   storage_type            = var.storage_type
@@ -24,7 +16,7 @@ resource "aws_db_instance" "primary" {
   backup_retention_period = var.backup_retention_period
   monitoring_interval     = var.monitoring_interval
   monitoring_role_arn     = var.monitoring_role_arn
-  db_subnet_group_name    = aws_db_subnet_group.this.name
+  db_subnet_group_name    = var.db_subnet_group_name
   publicly_accessible     = false
   vpc_security_group_ids  = [var.rds_security_group_id]
   tags = merge(local.merged_tags, {
