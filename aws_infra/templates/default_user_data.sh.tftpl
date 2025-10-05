@@ -1,34 +1,125 @@
 #!/bin/bash
-# Default user data for grocery app EC2 instances
-# Updates system, installs Docker & CloudWatch Agent, and runs application via docker-compose.
+# Default user data for grocery app EC2 instances (Amazon Linux 2)
+# Responsibilities:
+#  * System update & install: Docker, CloudWatch Agent, AWS CLI, git
+#  * Configure & start CloudWatch Agent (disk + memory metrics)
+#  * Login to ECR with retries and pull the application image
+#  * Run container idempotently with restart policy
+#  * Harden logging & error handling
 
 set -euo pipefail
+exec > /var/log/user-data.log 2>&1
 
-# Update base system
-apt update -y
-apt install -y docker.io amazon-cloudwatch-agent awscli git
+############################################
+# Variable materialization (Terraform template placeholders)
+############################################
+ECR_REPOSITORY_URL="${ecr_repository_url}"
+REGION="${region}"
+IMAGE_TAG="${image_tag}"
+# Optional: pass explicitly or derive from repository URL
+ECR_DOMAIN="${ecr_domain}"  # If not provided, derived below
+
+############################################
+# Sanity checks
+############################################
+for v in ECR_REPOSITORY_URL REGION IMAGE_TAG; do
+  if [[ -z "${!v}" ]]; then
+    echo "[FATAL] Variable $v is empty" >&2
+    exit 1
+  fi
+done
+
+if [[ -z "${ECR_DOMAIN}" ]]; then
+  ECR_DOMAIN=$(echo "${ECR_REPOSITORY_URL}" | cut -d'/' -f1)
+  echo "Derived ECR_DOMAIN=${ECR_DOMAIN}"
+fi
+
+############################################
+# System update & package install (Amazon Linux 2)
+############################################
+yum update -y
+yum install -y docker amazon-cloudwatch-agent awscli git
+
+# Install Docker if not present (should be covered by amazon-linux-extras)
+if ! command -v docker >/dev/null 2>&1; then
+  amazon-linux-extras install docker -y
+fi
+
 systemctl enable docker
+systemctl start docker
 
-# CloudWatch Agent basic config for disk usage metric
-tmp_cfg="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
-mkdir -p $(dirname "$tmp_cfg")
-cat > "$tmp_cfg" <<EOF
+# Add ec2-user (AL2 default) to docker group
+usermod -aG docker ec2-user || true
+
+############################################
+# CloudWatch Agent configuration (disk + memory)
+############################################
+CW_CFG="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+mkdir -p "$(dirname "$CW_CFG")"
+cat > "$CW_CFG" <<'JSON'
 {
   "metrics": {
     "metrics_collected": {
       "disk": {
         "measurement": ["used_percent"],
         "resources": ["*"]
+      },
+      "mem": {
+        "measurement": ["used_percent"]
       }
     }
   }
 }
-EOF
+JSON
 
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-  -a fetch-config \
-  -m ec2 \
-  -c file:$tmp_cfg \
-  -s
+  -a fetch-config -m ec2 -c file:$CW_CFG -s || true
+systemctl enable amazon-cloudwatch-agent || true
+
+############################################
+# ECR login with retries
+############################################
+MAX_RETRIES=5
+for attempt in $(seq 1 $MAX_RETRIES); do
+  if aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${ECR_DOMAIN}"; then
+    echo "ECR login succeeded on attempt ${attempt}"
+    break
+  fi
+  if [[ $attempt -eq $MAX_RETRIES ]]; then
+    echo "[FATAL] ECR login failed after ${MAX_RETRIES} attempts" >&2
+    exit 1
+  fi
+  echo "ECR login failed (attempt ${attempt}), retrying in 5s..." >&2
+  sleep 5
+done
+
+############################################
+# Pull & run container (idempotent)
+############################################
+echo "Pulling image ${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+docker pull "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+
+CONTAINER_NAME="grocery-app"
+if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+  echo "Container ${CONTAINER_NAME} exists; removing for clean redeploy"
+  docker rm -f "${CONTAINER_NAME}" || true
+fi
+
+docker run -d \
+  --name "${CONTAINER_NAME}" \
+  --restart unless-stopped \
+  -p 5000:5000 \
+  "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+
+############################################
+# Post-run verification
+############################################
+sleep 3
+if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+  echo "[FATAL] Container ${CONTAINER_NAME} is not running" >&2
+  docker logs "${CONTAINER_NAME}" || true
+  exit 1
+fi
 
 echo "User data bootstrap complete." > /var/log/user_data_complete
+echo "Done."
