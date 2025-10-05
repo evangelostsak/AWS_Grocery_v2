@@ -41,6 +41,10 @@ variable "rds_security_group_id" {
   type = string
 }
 
+variable "db_subnet_group_name" {
+  description = "The name of the DB Subnet Group"
+  type        = string
+}
 variable "monitoring_role_arn" {
   type = string
 }

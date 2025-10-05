@@ -7,6 +7,14 @@ provider "aws" {
   profile = var.profile
 }
 
+# --- ECR ---
+module "ecr" {
+  source          = "../../modules/ecr"
+  project_name    = var.project_name
+  environment     = var.environment
+  repository_name = var.ecr_repository_name
+}
+
 # --- VPC ---
 module "vpc" {
   source               = "../../modules/vpc"
@@ -41,7 +49,8 @@ module "s3" {
   db_dump_prefix      = var.db_dump_prefix
   avatar_prefix       = "avatars"
   avatar_filename     = "user_default.png"
-  avatar_path         = "../../backend/avatar/user_default.png"
+  # backend directory is at repo root (sibling of aws_infra), from enviroments/dev we need to go up three levels
+  avatar_path         = "../../../backend/avatar/user_default.png"
   layer_prefix        = var.layer_prefix
   layer_filename      = var.layer_filename
   layer_path          = "../../layers/${var.layer_filename}"
@@ -116,6 +125,7 @@ module "ec2" {
   health_check_grace_period = var.asg_health_check_grace_period
   ecr_repository_url        = var.ecr_repository_url
   image_tag                 = var.image_tag
+  alb_dns_name              = module.alb.alb_dns_name
 }
 
 # --- RDS ---

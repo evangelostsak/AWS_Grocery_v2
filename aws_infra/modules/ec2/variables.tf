@@ -73,8 +73,9 @@ variable "user_data" {
   description = "If provided (already base64 if inline_user_data_base64=true) overrides default template"
 }
 variable "default_user_data_template_path" {
-  type    = string
-  default = "../templates/default_user_data.sh.tftpl"
+  type        = string
+  default     = "" # If empty we derive the path relative to this module (../../templates/default_user_data.sh.tftpl)
+  description = "Optional override path to the default user data template"
 }
 
 variable "inline_user_data_base64" {
@@ -89,5 +90,10 @@ variable "ecr_repository_url" {
 variable "image_tag" {
   type    = string
   default = "latest"
+}
+
+variable "alb_dns_name" {
+  description = "Application Load Balancer DNS name (passed into user data for frontend API URL)"
+  type        = string
 }
 

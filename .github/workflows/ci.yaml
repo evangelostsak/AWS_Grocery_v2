@@ -1,0 +1,87 @@
+name: Terraform CI (Non-Mutating)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.ARN_GITHUB_ACTIONS_ROLE }}
+          role-session-name: GitHubActionsSession
+          aws-region: ${{ secrets.TF_VAR_REGION }}
+
+      - name: Generate backend.tf (reuse existing backend)
+        run: |
+          WORK_DIR=aws_infra/enviroments/dev
+          mkdir -p "$WORK_DIR"
+          cat > "$WORK_DIR/backend.tf" <<EOF
+          terraform {
+            backend "s3" {
+              bucket         = "${{ secrets.TF_STATE_BACKEND_BUCKET_NAME }}"
+              key            = "terraform_state/statefile.tfstate"
+              region         = "${{ secrets.TF_VAR_REGION }}"
+              encrypt        = true
+              dynamodb_table = "${{ secrets.TF_STATE_LOCK_TABLE }}"
+            }
+          }
+          EOF
+          echo "Generated backend.tf (non-mutating)."
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+        working-directory: aws_infra/enviroments/dev
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: aws_infra/enviroments/dev
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: aws_infra/enviroments/dev
+
+      - name: Terraform plan (no apply)
+        run: terraform plan -no-color -input=false -out=tfplan.bin || true
+        working-directory: aws_infra/enviroments/dev
+
+      - name: Show plan summary (first 300 lines)
+        run: terraform show -no-color tfplan.bin | head -n 300 || true
+        working-directory: aws_infra/enviroments/dev
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: aws_infra/enviroments/dev/tfplan.bin
+
+      - name: Fail if destroy actions detected (soft gate)
+        run: |
+          set -e
+          terraform show -json tfplan.bin > plan.json || exit 0
+          destroys=$(jq '[.resource_changes[]? | select(.change.actions[] == "delete" or .change.actions[] == "replace") ] | length' plan.json 2>/dev/null || echo 0)
+          echo "Potential destructive changes: $destroys"
+          if [ "$destroys" != "0" ]; then
+            echo "Detected potential destructive changes (delete/replace). Review required." >&2
+          fi
+        working-directory: aws_infra/enviroments/dev

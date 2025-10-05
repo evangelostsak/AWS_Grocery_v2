@@ -41,7 +41,6 @@ variable "availability_zones" {
 
 variable "allowed_ssh_cidr" {
   type    = string
-  default = "0.0.0.0/0"
 }
 
 variable "app_port" {
@@ -181,6 +180,11 @@ variable "expiration_days" {
 
 variable "ecr_repository_url" {
   description = "ECR repository URL for application image"
+  type        = string
+}
+
+variable "ecr_repository_name" {
+  description = "ECR repository name for application image"
   type        = string
 }
 

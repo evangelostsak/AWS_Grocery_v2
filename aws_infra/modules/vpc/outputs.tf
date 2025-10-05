@@ -18,3 +18,7 @@ output "availability_zones" {
   value       = var.availability_zones
 }
 
+output "db_subnet_group_name" {
+  value = aws_db_subnet_group.this.name
+  description = "The name of DB Subnet Group"
+}

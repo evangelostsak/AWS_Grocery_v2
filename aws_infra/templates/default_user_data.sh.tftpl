@@ -1,34 +1,170 @@
 #!/bin/bash
-# Default user data for grocery app EC2 instances
-# Updates system, installs Docker & CloudWatch Agent, and runs application via docker-compose.
+# Default user data for grocery app EC2 instances (Amazon Linux 2)
+# Responsibilities:
+#  * System update & install: Docker, CloudWatch Agent, AWS CLI, git
+#  * Configure & start CloudWatch Agent (disk + memory metrics)
+#  * Login to ECR with retries and pull the application image
+#  * Run container idempotently with restart policy
+#  * Harden logging & error handling
 
 set -euo pipefail
+exec > /var/log/user-data.log 2>&1
 
-# Update base system
-apt update -y
-apt install -y docker.io amazon-cloudwatch-agent awscli git
+############################################
+# Variable materialization (Terraform template placeholders)
+############################################
+ECR_REPOSITORY_URL="${ecr_repository_url}"
+REGION="${region}"
+IMAGE_TAG="${image_tag}"
+ECR_DOMAIN="${ecr_domain}"  # If not provided, derived below
+# Tag prefixes (single repo strategy)
+BACKEND_TAG="backend-${image_tag}"
+FRONTEND_TAG="frontend-${image_tag}"
+
+############################################
+# Sanity checks
+############################################
+for v in ECR_REPOSITORY_URL REGION IMAGE_TAG BACKEND_TAG FRONTEND_TAG; do
+  if [[ -z "${!v}" ]]; then
+    echo "[FATAL] Variable $v is empty" >&2
+    exit 1
+  fi
+done
+
+if [[ -z "${ECR_DOMAIN}" ]]; then
+  ECR_DOMAIN=$(echo "${ECR_REPOSITORY_URL}" | cut -d'/' -f1)
+  echo "Derived ECR_DOMAIN=${ECR_DOMAIN}"
+fi
+
+############################################
+# System update & package install (Amazon Linux 2)
+############################################
+yum update -y
+yum install -y docker amazon-cloudwatch-agent awscli git
+
+# Install Docker if not present (should be covered by amazon-linux-extras)
+if ! command -v docker >/dev/null 2>&1; then
+  amazon-linux-extras install docker -y
+fi
+
 systemctl enable docker
+systemctl start docker
 
-# CloudWatch Agent basic config for disk usage metric
-tmp_cfg="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
-mkdir -p $(dirname "$tmp_cfg")
-cat > "$tmp_cfg" <<EOF
+# Add ec2-user (AL2 default) to docker group
+usermod -aG docker ec2-user || true
+
+############################################
+# CloudWatch Agent configuration (disk + memory)
+############################################
+CW_CFG="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+mkdir -p "$(dirname "$CW_CFG")"
+cat > "$CW_CFG" <<'JSON'
 {
   "metrics": {
     "metrics_collected": {
       "disk": {
         "measurement": ["used_percent"],
         "resources": ["*"]
+      },
+      "mem": {
+        "measurement": ["used_percent"]
       }
     }
   }
 }
-EOF
+JSON
 
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-  -a fetch-config \
-  -m ec2 \
-  -c file:$tmp_cfg \
-  -s
+  -a fetch-config -m ec2 -c file:$CW_CFG -s || true
+systemctl enable amazon-cloudwatch-agent || true
+
+############################################
+# ECR login with retries
+############################################
+MAX_RETRIES=5
+for attempt in $(seq 1 $MAX_RETRIES); do
+  if aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${ECR_DOMAIN}"; then
+    echo "ECR login succeeded on attempt ${attempt}"
+    break
+  fi
+  if [[ $attempt -eq $MAX_RETRIES ]]; then
+    echo "[FATAL] ECR login failed after ${MAX_RETRIES} attempts" >&2
+    exit 1
+  fi
+  echo "ECR login failed (attempt ${attempt}), retrying in 5s..." >&2
+  sleep 5
+done
+
+############################################
+# Pull & run backend+frontend via docker compose (idempotent)
+############################################
+echo "Pulling backend tag ${BACKEND_TAG} and frontend tag ${FRONTEND_TAG}"
+docker pull "${ECR_REPOSITORY_URL}:${BACKEND_TAG}" || { echo "Backend image pull failed"; exit 1; }
+docker pull "${ECR_REPOSITORY_URL}:${FRONTEND_TAG}" || { echo "Frontend image pull failed"; exit 1; }
+
+COMPOSE_DIR="/opt/grocery"
+mkdir -p "$COMPOSE_DIR"
+
+cat > "$COMPOSE_DIR/docker-compose.yml" <<EOF
+services:
+  frontend:
+    image: ${ECR_REPOSITORY_URL}:${FRONTEND_TAG}
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_SERVER=http://${alb_dns_name}
+    networks:
+      - app-network
+  backend:
+    image: ${ECR_REPOSITORY_URL}:${BACKEND_TAG}
+    container_name: backend
+    restart: unless-stopped
+    env_file:
+      - backend.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+EOF
+
+# Backend environment file placeholder (extend if needed)
+cat > "$COMPOSE_DIR/backend.env" <<BENV
+PORT=5000
+BENV
+
+cd "$COMPOSE_DIR"
+
+if docker ps --format '{{.Names}}' | grep -Eq '(^backend$|^frontend$)'; then
+  echo "Containers already running; skipping compose up"
+else
+  echo "Launching docker compose stack"
+  if command -v docker compose >/dev/null 2>&1; then
+    docker compose up -d
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose up -d
+  else
+    echo "docker compose plugin not found; installing fallback"
+    curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    docker-compose up -d
+  fi
+fi
+
+# Verify both containers
+sleep 5
+for c in backend frontend; do
+  if ! docker ps --format '{{.Names}}' | grep -q "^${c}$"; then
+    echo "[FATAL] Container ${c} failed to start" >&2
+    docker logs "${c}" || true
+    exit 1
+  fi
+done
 
 echo "User data bootstrap complete." > /var/log/user_data_complete
+echo "Done."
