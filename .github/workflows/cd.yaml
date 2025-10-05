@@ -133,13 +133,14 @@ jobs:
             -target=module.ecr \
             -target=module.vpc \
             -target=module.security \
+            -target=module.alb \
             -target=module.rds \
             -target=module.s3 \
             -target=module.iam \
             -target=module.lambda \
+            -target=module.monitoring \
             -target=module.step_functions \
             -target=module.event_bridge \
-            -target=module.cloudwatch \
             || exit 1
         working-directory: aws_infra/enviroments/dev
 
@@ -148,14 +149,26 @@ jobs:
           echo "Fetching Terraform outputs..."
           POSTGRES_HOST=$(terraform output -raw rds_host)
           ECR_REPOSITORY_URL=$(terraform output -raw ecr_repository_url)
+          ALB_DNS_NAME=$(terraform output -raw alb_dns_name)
           ECR_REGISTRY_URL=${ECR_REPOSITORY_URL%%/*}
           echo "POSTGRES_HOST=$POSTGRES_HOST" >> $GITHUB_ENV
           echo "ECR_REPOSITORY_URL=$ECR_REPOSITORY_URL" >> $GITHUB_ENV
           echo "ECR_REGISTRY_URL=$ECR_REGISTRY_URL" >> $GITHUB_ENV
+          echo "ALB_DNS_NAME=$ALB_DNS_NAME" >> $GITHUB_ENV
           echo "POSTGRES_HOST: $POSTGRES_HOST"
           echo "ECR_REPOSITORY_URL: $ECR_REPOSITORY_URL"
           echo "ECR_REGISTRY_URL: $ECR_REGISTRY_URL"
+          echo "ALB_DNS_NAME: $ALB_DNS_NAME"
         working-directory: aws_infra/enviroments/dev
+
+      - name: Set image tag
+        run: |
+          # Use short SHA for tagging; customize if you need semantic versioning
+          IMAGE_TAG=${GITHUB_SHA::7}
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          # Propagate to Terraform so ASG/user data can pull matching versioned tags
+          echo "TF_VAR_image_tag=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "Using IMAGE_TAG=$IMAGE_TAG"
 
       - name: Generate .env file for backend
         run: |
@@ -185,13 +198,34 @@ jobs:
       - name: Build Docker image
         run: |
           cd backend
-          docker build -t my-ecr-repo:latest . || exit 1
+          docker build -t app-backend:build . || exit 1
 
       - name: Tag and push Docker image to ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.TF_VAR_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY_URL }}
-          docker tag my-ecr-repo:latest ${{ env.ECR_REPOSITORY_URL }}:latest
-          docker push ${{ env.ECR_REPOSITORY_URL }}:latest || exit 1
+          # Tag backend image with prefix inside single repository
+          docker tag app-backend:build ${{ env.ECR_REPOSITORY_URL }}:backend-${{ env.IMAGE_TAG }}
+          docker tag app-backend:build ${{ env.ECR_REPOSITORY_URL }}:backend-latest
+          docker push ${{ env.ECR_REPOSITORY_URL }}:backend-${{ env.IMAGE_TAG }} || exit 1
+          docker push ${{ env.ECR_REPOSITORY_URL }}:backend-latest || exit 1
+
+      - name: Prepare frontend build env
+        run: |
+          echo "REACT_APP_BACKEND_SERVER=http://${{ env.ALB_DNS_NAME }}" > frontend/.env
+          chmod 600 frontend/.env
+          echo "Frontend .env prepared (not printed)."
+
+      - name: Build frontend image
+        run: |
+          docker build -t app-frontend:build --build-arg REACT_APP_BACKEND_SERVER=http://${{ env.ALB_DNS_NAME }} frontend || exit 1
+
+      - name: Tag and push frontend image
+        run: |
+          aws ecr get-login-password --region ${{ secrets.TF_VAR_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY_URL }}
+          docker tag app-frontend:build ${{ env.ECR_REPOSITORY_URL }}:frontend-${{ env.IMAGE_TAG }}
+          docker tag app-frontend:build ${{ env.ECR_REPOSITORY_URL }}:frontend-latest
+          docker push ${{ env.ECR_REPOSITORY_URL }}:frontend-${{ env.IMAGE_TAG }} || exit 1
+          docker push ${{ env.ECR_REPOSITORY_URL }}:frontend-latest || exit 1
 
       - name: Upload SQLite dump file to S3
         run: |
@@ -215,4 +249,9 @@ jobs:
 
       - name: Clean up Docker images
         run: |
-          docker rmi my-ecr-repo:latest ${{ env.ECR_REPOSITORY_URL }}:latest || true
+          docker rmi app-backend:build || true
+          docker rmi app-frontend:build || true
+          docker rmi ${{ env.ECR_REPOSITORY_URL }}:backend-${{ env.IMAGE_TAG }} || true
+          docker rmi ${{ env.ECR_REPOSITORY_URL }}:frontend-${{ env.IMAGE_TAG }} || true
+          docker rmi ${{ env.ECR_REPOSITORY_URL }}:backend-latest || true
+          docker rmi ${{ env.ECR_REPOSITORY_URL }}:frontend-latest || true
