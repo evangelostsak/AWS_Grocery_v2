@@ -1,0 +1,79 @@
+# ============================================================================
+# dev.tfvars.example
+# ----------------------------------------------------------------------------
+# Copy this file to dev.tfvars and adjust values/secrets for your environment.
+# Secrets (db_pass) should be overridden securely (e.g., via CI variable store)
+# and NOT committed to version control. Example values below are placeholders.
+# ============================================================================
+
+# --- Core Identification ---
+project_name = "grocery"        # Logical project name (used in resource names)
+environment  = "dev"            # Environment identifier (dev/staging/prod)
+region       = "eu-central-1"   # AWS region
+profile      = "default"        # Local AWS CLI profile (omit in CI with OIDC)
+
+# --- Networking ---
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+availability_zones   = ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
+allowed_ssh_cidr     = "Your IP or open for your testing"
+app_port             = 5000                    # Backend container / target group port
+db_port              = 5432                    # PostgreSQL port
+
+# --- ALB Health Check ---
+alb_health_check_path    = "/"
+alb_health_check_matcher = "200"
+
+# --- Compute / ASG ---
+ami_id                        = "ami-xxxxxxxxxxxxxxxxx"  # Amazon Linux 2 AMI id for region
+instance_type                 = "t3.micro"
+key_name                      = "grocery-dev-key"        # Existing EC2 key pair
+asg_min_size                  = 1
+asg_max_size                  = 3
+asg_desired_capacity          = 1
+asg_health_check_type         = "EC2"                    # Or ELB if using ALB health checks
+asg_health_check_grace_period = 300
+
+# --- Database ---
+db_name   = "grocery"       # Database name
+db_user   = "grocery_user"  # DB username
+db_pass   = "CHANGE_ME"      # DB Password DO NOT COMMIT REAL PASSWORDS
+# Instance size & replication
+db_class            = "db.t3.micro"
+read_replica_az     = "eu-central-1b"
+create_read_replica = true
+
+# --- Monitoring / Alerts ---
+alert_email          = "alerts@example.com" Change this your email or create a temp email for testing
+cpu_alarm_threshold  = 80
+disk_alarm_threshold = 80
+
+# --- S3 (Data + Assets + Layers) ---
+bucket_prefix    = "grocery-app"      # Will be combined with env & project for uniqueness
+db_dump_prefix   = "db-dumps"         # Folder/prefix for dumps
+db_dump_filename = "initial.dump"     # Initial seed dump (optional)
+layer_prefix     = "layers"           # Lambda layers folder
+layer_filename   = "boto3-psycopg2-layer.zip"  # Matches file under aws_infra/layers
+lifecycle_status = "Enabled"
+expiration_days  = 30
+
+# --- ECR ---
+# Single repository strategy: both frontend & backend images share one repo via tag prefixes.
+ecr_repository_name = "grocery-app"   # Logical repo name (Terraform-managed)
+# Populate after first apply or inject via pipeline; used by EC2 user data + CI builds.
+# Example form: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/grocery-app
+ecr_repository_url  = "123456789012.dkr.ecr.eu-central-1.amazonaws.com/grocery-app"
+
+# --- Image Deployment ---
+# image_tag is normally injected by the CD pipeline (e.g. short SHA). Default 'latest' ok for manual tests.
+image_tag = "latest"
+
+# ============================================================================
+# Guidance:
+# 1. Never commit a real db_pass. Provide via TF_VAR_db_pass environment variable in CI/CD.
+# 2. Restrict allowed_ssh_cidr to your IP (e.g. "203.0.113.10/32").
+# 3. Use an SSM Parameter / Secrets Manager for database credentials in production.
+# 4. Ensure ami_id is region-specific and periodically refreshed for patches.
+# 5. When rotating image_tag, plan will not recreate infra; consider ASG instance refresh.
+# ============================================================================
