@@ -125,6 +125,7 @@ module "ec2" {
   health_check_grace_period = var.asg_health_check_grace_period
   ecr_repository_url        = var.ecr_repository_url
   image_tag                 = var.image_tag
+  alb_dns_name              = module.alb.alb_dns_name
 }
 
 # --- RDS ---
