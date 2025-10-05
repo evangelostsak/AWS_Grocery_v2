@@ -16,13 +16,15 @@ exec > /var/log/user-data.log 2>&1
 ECR_REPOSITORY_URL="${ecr_repository_url}"
 REGION="${region}"
 IMAGE_TAG="${image_tag}"
-# Optional: pass explicitly or derive from repository URL
 ECR_DOMAIN="${ecr_domain}"  # If not provided, derived below
+# Tag prefixes (single repo strategy)
+BACKEND_TAG="backend-${image_tag}"
+FRONTEND_TAG="frontend-${image_tag}"
 
 ############################################
 # Sanity checks
 ############################################
-for v in ECR_REPOSITORY_URL REGION IMAGE_TAG; do
+for v in ECR_REPOSITORY_URL REGION IMAGE_TAG BACKEND_TAG FRONTEND_TAG; do
   if [[ -z "${!v}" ]]; then
     echo "[FATAL] Variable $v is empty" >&2
     exit 1
@@ -94,32 +96,75 @@ for attempt in $(seq 1 $MAX_RETRIES); do
 done
 
 ############################################
-# Pull & run container (idempotent)
+# Pull & run backend+frontend via docker compose (idempotent)
 ############################################
-echo "Pulling image ${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
-docker pull "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+echo "Pulling backend tag ${BACKEND_TAG} and frontend tag ${FRONTEND_TAG}"
+docker pull "${ECR_REPOSITORY_URL}:${BACKEND_TAG}" || { echo "Backend image pull failed"; exit 1; }
+docker pull "${ECR_REPOSITORY_URL}:${FRONTEND_TAG}" || { echo "Frontend image pull failed"; exit 1; }
 
-CONTAINER_NAME="grocery-app"
-if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  echo "Container ${CONTAINER_NAME} exists; removing for clean redeploy"
-  docker rm -f "${CONTAINER_NAME}" || true
+COMPOSE_DIR="/opt/grocery"
+mkdir -p "$COMPOSE_DIR"
+
+cat > "$COMPOSE_DIR/docker-compose.yml" <<EOF
+services:
+  frontend:
+    image: ${ECR_REPOSITORY_URL}:${FRONTEND_TAG}
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_SERVER=http://${alb_dns_name}
+    networks:
+      - app-network
+  backend:
+    image: ${ECR_REPOSITORY_URL}:${BACKEND_TAG}
+    container_name: backend
+    restart: unless-stopped
+    env_file:
+      - backend.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+EOF
+
+# Backend environment file placeholder (extend if needed)
+cat > "$COMPOSE_DIR/backend.env" <<BENV
+PORT=5000
+BENV
+
+cd "$COMPOSE_DIR"
+
+if docker ps --format '{{.Names}}' | grep -Eq '(^backend$|^frontend$)'; then
+  echo "Containers already running; skipping compose up"
+else
+  echo "Launching docker compose stack"
+  if command -v docker compose >/dev/null 2>&1; then
+    docker compose up -d
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose up -d
+  else
+    echo "docker compose plugin not found; installing fallback"
+    curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    docker-compose up -d
+  fi
 fi
 
-docker run -d \
-  --name "${CONTAINER_NAME}" \
-  --restart unless-stopped \
-  -p 5000:5000 \
-  "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
-
-############################################
-# Post-run verification
-############################################
-sleep 3
-if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  echo "[FATAL] Container ${CONTAINER_NAME} is not running" >&2
-  docker logs "${CONTAINER_NAME}" || true
-  exit 1
-fi
+# Verify both containers
+sleep 5
+for c in backend frontend; do
+  if ! docker ps --format '{{.Names}}' | grep -q "^${c}$"; then
+    echo "[FATAL] Container ${c} failed to start" >&2
+    docker logs "${c}" || true
+    exit 1
+  fi
+done
 
 echo "User data bootstrap complete." > /var/log/user_data_complete
 echo "Done."
