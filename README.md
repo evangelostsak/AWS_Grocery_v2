@@ -25,29 +25,15 @@ For application-level docs see `app.md`.
 ## 2. Diagram Placeholders
 
 
-### 2.1 High-Level Architecture
-<!-- DIAGRAM: High-Level Architecture (VPC, ALB, ASG/EC2, RDS primary+replica, S3, ECR, EventBridge, Step Functions, Lambda, IAM, CloudWatch) -->
+### 2.1 High-Level Architecture + CI/CD Pipeline
 
-### 2.2 Module Dependency Graph
-<!-- DIAGRAM: Terraform Module Dependency Graph (vpc -> security -> alb/ec2/rds -> monitoring/iam -> lambda -> step_functions -> event_bridge) -->
+![Architecture + CI/CD Pipeline](./aws_infra/public/high_level_architecture_+_pipeline.png)
+
+### 2.2 High - Level Architecture
+![Infrastructure](./aws_infra/public/high_level_infra.png)
 
 ### 2.3 CI/CD Pipeline Flow
-<!-- DIAGRAM: GitHub Actions (push) -> CI (fmt/validate/plan) -> artifact -> workflow_run -> CD (bootstrap? -> build/push images -> terraform apply Phase 1 -> terraform apply Phase 2) -->
-
-### 2.4 Runtime Container Layout
-<!-- DIAGRAM: EC2 instance: docker compose (frontend container :80 served by nginx; backend container :5000), network SGs, health checks -->
-
-### 2.5 Data / Backup Flow
-<!-- DIAGRAM: RDS -> dump -> S3 (db-dumps/) -> EventBridge Rule -> Step Functions -> Lambda restore -->
-
-### 2.6 User Data Sequence
-<!-- DIAGRAM: Launch -> Install -> ECR Login -> Pull images -> Generate compose -> Up -> Verify -->
-
-### 2.7 Security Context
-<!-- DIAGRAM: IAM Roles (EC2, Lambda, Step Functions, EventBridge, RDS Monitoring) + GitHub OIDC trust relationship -->
-
-### 2.8 Monitoring & Alerting
-<!-- DIAGRAM: Metrics -> Alarms -> SNS / Email -->
+![Pipeline](./aws_infra/public/pipeline_diagram.png)
 
 ---
 
