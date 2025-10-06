@@ -140,6 +140,7 @@ module "rds" {
   read_replica_az       = var.read_replica_az
   private_subnet_ids    = module.vpc.private_subnet_ids
   rds_security_group_id = module.security.rds_sg_id
+  db_subnet_group_name  = module.vpc.db_subnet_group_name
   monitoring_role_arn   = module.iam.rds_monitoring_role_arn
   create_read_replica   = var.create_read_replica
 }
